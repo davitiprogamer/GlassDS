@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>პროდუქტის მენეჯმენტი</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* Add CSS styling here for better button distribution */
+.container {
+    text-align: center;
+}
+
+button {
+    margin: 5px;
+}
+
+.product-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.product-card {
+    width: 22%;
+    margin: 10px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-card img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.product-card h3 {
+    margin-bottom: 5px;
+    font-size: 18px;
+}
+
+.product-card p {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.product-card button {
+    margin-top: 10px;
+}
+
+.error-message {
+    color: red;
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <button id="btnTeaSet">თეფში</button>
+        <button id="btnPlate">ჭიქა</button>
+        <button id="btnCup">დოქი</button>
+        <button id="btnOther">სხვა</button>
+    </div>
+
+    <div class="product-container" id="productInfo"></div>
+
+    <div class="container">
+        <h1>საწყობის საიტი</h1>
+        <div class="form-group">
+            <label for="searchInput">ჩაწერეთ პროდუქტის კოდი:</label>
+            <input type="text" id="searchInput" placeholder="...">
+            <div id="searchResult" class="product-container"></div> <!-- New div to display product info -->
+        </div>
+        
+        <form id="productForm">
+            <div class="form-group">
+                <label for="productName">პროდუქტის სახელი:</label>
+                <input type="text" id="productName" name="productName" required>
+            </div>
+            <div class="form-group">
+                <label for="productCode">პროდუქტის კოდი:</label>
+                <input type="text" id="productCode" name="productCode" required>
+                <span class="error-message" id="errorMessage"></span>
+            </div>
+            <div class="form-group">
+                <label for="productType">პროდუქტის ტიპი:</label>
+                <select id="productType" name="productType" required>
+                    <option value="თეფში">თეფში</option>
+                    <option value="ჭიქა">ჭიქა</option>
+                    <option value="დოქი">დოქი</option>
+                    <option value="სხვა">სხვა</option>
+                    <!-- Add other options as needed -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="productMaterial">პროდუქტის მასალა:</label>
+                <select id="productMaterial" name="productMaterial" required>
+                    <option value="შუშა">შუშა</option>
+                    <option value="რკინა">რკინა</option>
+                    <option value="სხვა">სხვა</option>
+                    <!-- Add other options as needed -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="productDescription">პროდუქტის აღწერა:</label>
+                <textarea id="productDescription" name="productDescription" rows="4" cols="50"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="productPrice">პროდუქტის ფასი:</label>
+                <input type="text" id="productPrice" name="productPrice" required>
+                <span class="error-message" id="priceErrorMessage"></span>
+            </div>
+            <div class="form-group">
+                <label for="productImage">პროდუქტის ფოტო:</label>
+                <input type="file" id="productImage" name="productImage" accept="image/*" required>
+            </div>
+            <button type="submit">ატვირთეთ პროდუქტი</button>
+        </form>
+        
+    </div>
+
+    <script>
+        // Initialize products array
+        var products = [];
+        
+        // Function to retrieve products from Local Storage
+        function retrieveProductsFromLocalStorage() {
+            var storedProducts = localStorage.getItem('products');
+            if (storedProducts) {
+                try {
+                    return JSON.parse(storedProducts);
+                } catch (error) {
+                    console.error('Error parsing stored products:', error);
+                    return [];
+                }
+            }
+            return [];
+        }
+        
+        // Initialize products on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            products = retrieveProductsFromLocalStorage();
+            updateSearchFunctionality();
+            document.getElementById("productForm").addEventListener("submit", handleFormSubmission);
+            
+            // Add event listeners to buttons
+            document.getElementById("btnTeaSet").addEventListener("click", function() {
+                showProductsByType("თეფში");
+            });
+            document.getElementById("btnPlate").addEventListener("click", function() {
+                showProductsByType("ჭიქა");
+            });
+            document.getElementById("btnCup").addEventListener("click", function() {
+                showProductsByType("დოქი");
+            });
+            document.getElementById("btnOther").addEventListener("click", function() {
+                showProductsByType("სხვა");
+            });
+        });
+        
+        // Function to save products to Local Storage
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+        
+        // Function to search for a product by code
+        function searchProduct(code) {
+            return products.find(product => product.code === code) || null;
+        }
+        
+        // Function to handle form submission
+        function handleFormSubmission(event) {
+            event.preventDefault();
+            
+            // Get form values
+            var productName = document.getElementById("productName").value;
+            var productCode = document.getElementById("productCode").value;
+            var productType = document.getElementById("productType").value;
+            var productMaterial = document.getElementById("productMaterial").value;
+            var productDescription = document.getElementById("productDescription").value;
+            var productPrice = document.getElementById("productPrice").value;
+            var productImage = document.getElementById("productImage").files[0];
+            
+            // Validate price
+            if (productPrice === "" || isNaN(productPrice) || parseFloat(productPrice) <= 0) {
+                document.getElementById("priceErrorMessage").textContent = "გთხოვთ შეიყვანოთ სწორი ფასი";
+                return;
+            } else {
+                document.getElementById("priceErrorMessage").textContent = "";
+            }
+
+            // Check if product with the same code already exists
+            var existingProductIndex = products.findIndex(product => product.code === productCode);
+            if (existingProductIndex !== -1) {
+                var confirmEdit = confirm("Product with this code already exists. Do you want to edit it?");
+                if (confirmEdit) {
+                    var reader = new FileReader();
+                    reader.onload = function(event) {
+                        products[existingProductIndex] = {
+                            name: productName,
+                            code: productCode,
+                            type: productType,
+                            material: productMaterial,
+                            description: productDescription,
+                            price: productPrice,
+                            image: event.target.result // Base64 representation of the image
+                        };
+                        saveProducts();
+                        alert("Product edited successfully!");
+                        updateSearchFunctionality();
+                    };
+                    reader.readAsDataURL(productImage);
+                }
+            } else {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var product = {
+                        name: productName,
+                        code: productCode,
+                        type: productType,
+                        material: productMaterial,
+                        description: productDescription,
+                        price: productPrice,
+                        image: event.target.result // Base64 representation of the image
+                    };
+                    products.push(product);
+        
+                    // Save products to Local Storage
+                    saveProducts();
+        
+                    // Display success message
+                    alert("Product added successfully!");
+        
+                    // Reset form
+                    document.getElementById("productForm").reset();
+                    
+                    // Update search functionality
+                    updateSearchFunctionality();
+                };
+                reader.readAsDataURL(productImage);
+            }
+        }
+        
+        // Function to update search functionality
+        function updateSearchFunctionality() {
+            var searchInput = document.getElementById("searchInput");
+            var searchResultDiv = document.getElementById("searchResult"); // Get the search result div
+            searchInput.addEventListener("input", function(event) {
+                var searchValue = event.target.value.trim();
+                if (searchValue.length > 0) {
+                    var product = searchProduct(searchValue);
+                    if (product) {
+                        searchResultDiv.innerHTML = `
+                            <div class="product-card">
+                                <h3>${product.name}</h3>
+                                <p><strong>პროდუქტის კოდი :</strong> ${product.code}</p>
+                                <p><strong>პროდუქტის ტიპი:</strong> ${product.type}</p>
+                                <p><strong>პროდუქტის მასალა:</strong> ${product.material}</p>
+                                <p><strong>პროდუქტის აღწერა:</strong> ${product.description}</p>
+                                <p><strong>პროდუქტის ფასი:</strong> ${product.description}</p>
+                                <img src="${product.image}" alt="${product.name}" style="max-width: 300px;">
+                            </div>
+                        `;
+                    } else {
+                        searchResultDiv.innerHTML = "<p>პროდუქტი ვერ მოიძებნა</p>";
+                    }
+                } else {
+                    searchResultDiv.innerHTML = ""; // Clear search result when input is empty
+                }
+            });
+        }
+        
+        // Function to display product information
+        function displayProduct(product) {
+            var productInfoDiv = document.getElementById("productInfo");
+            if (product) {
+                productInfoDiv.innerHTML = `
+                    <h2>${product.name}</h2>
+                    <p><strong> პროდუქტის კოდი ::</strong> ${product.code}</p>
+                    <p><strong>პროდუქტის ტიპი:</strong> ${product.type}</p>
+                    <p><strong>პროდუქტის მასალა:</strong> ${product.material}</p>
+                    <p><strong>პროდუქტის აღწერა:</strong> ${product.description}</p>
+                    <img src="${product.image}" alt="${product.name}" style="max-width: 300px;">
+                    <button onclick="editProduct('${product.code}')">Edit</button>
+                    <button onclick="deleteProduct('${product.code}')">Delete</button>
+                `;
+            } else {
+                productInfoDiv.innerHTML = "პროდუქტი ვერ მოიძებნა";
+            }
+        }
+        
+        // Function to show products of a specific type below the button
+        function showProductsByType(productType, buttonId) {
+            var productSection = document.getElementById("productInfo");
+            productSection.innerHTML = '';
+        
+            products.forEach(function(product) {
+                if (product.type === productType) {
+                    var productCard = document.createElement('div');
+                    productCard.classList.add('product-card');
+                    productCard.innerHTML = `
+                        <h3>${product.name}</h3>
+                        <p><strong>პროდუქტის კოდი:</strong> ${product.code}</p>
+                        <p><strong>მასალა:</strong> ${product.material}</p>
+                        <p><strong>ფასი:</strong> ${product.price} ლარი</p>
+                        <img src="${product.image}" alt="${product.name}">
+                        <button onclick="editProduct('${product.code}')">Edit</button>
+                        <button onclick="deleteProduct('${product.code}')">Delete</button>
+                    `;
+                    productSection.appendChild(productCard);
+                }
+            });
+        }
+        
+        // Function to edit a product
+        function editProduct(code) {
+            var product = searchProduct(code);
+            if (product) {
+                document.getElementById("productName").value = product.name;
+                document.getElementById("productCode").value = product.code;
+                document.getElementById("productType").value = product.type;
+                document.getElementById("productMaterial").value = product.material;
+                document.getElementById("productDescription").value = product.description;
+                document.getElementById("productPrice").value = product.price;
+                document.getElementById("productImage").value = ""; // Clear file input to prevent re-uploading the same image
+                document.getElementById("productInfo").innerHTML = ""; // Clear product info display
+            }
+        }
+        
+        // Function to delete a product
+        function deleteProduct(code) {
+            var confirmDelete = confirm("დარწმუნებული ხარ რომ გსურს პროდუქტის წაშლა?");
+            if (confirmDelete) {
+                var productIndex = products.findIndex(product => product.code === code);
+                if (productIndex !== -1) {
+                    products.splice(productIndex, 1);
+                    saveProducts();
+                    updateSearchFunctionality();
+                    alert("პროდუქტი წარმატებით წაიშალა");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
